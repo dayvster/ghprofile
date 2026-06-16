@@ -21,6 +21,9 @@ A beautiful, customizable GitHub profile viewer for your terminal.
 
 ---
 
+<img width="1426" height="1083" alt="image" src="https://github.com/user-attachments/assets/6e0aff20-7d3d-44af-8703-97c202a52199" />
+
+
 ## Features
 
 - Fetch and display GitHub user profiles and top repositories
