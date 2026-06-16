@@ -30,6 +30,10 @@ A beautiful, customizable GitHub profile viewer for your terminal.
 - Language stats, repo stars, forks, and more
 - Contribution graph (requires GitHub token)
 - Compare multiple users at once
+- Sort and filter repositories
+- Language byte breakdown (accurate percentages across all repos)
+- Rate-limit awareness (auto-warns at low quota)
+- Verbose/quiet output modes
 - Icon-rich output with Nerd Font support
 - JSON output for piping
 - Caching and demo mode for offline/limited API use
@@ -62,7 +66,7 @@ go build -o ghprofile ./cmd/main.go
 ./ghprofile --user dayvster --token ghp_xxxxxxxxxxxx
 
 # Compare multiple users
-./ghprofile --user dayvster,torvalds
+./ghprofile --user user1,user2
 
 # JSON output
 ./ghprofile --user dayvster --json
@@ -91,6 +95,10 @@ go build -o ghprofile ./cmd/main.go
 | `--demo` | `false` | Force demo data (skip network and cache) |
 | `--size` | `medium` | Output size: `small`, `medium`, `large`, `full` |
 | `--tui` | `true` | Use interactive TUI mode |
+| `--verbose`, `-v` | `false` | Print API request URLs, timing, cache info to stderr |
+| `--quiet`, `-q` | `false` | Suppress stderr warning messages |
+| `--sort` | `stars` | Sort repos by: `stars`, `forks`, `name`, `updated` |
+| `--since` | — | Only show repos updated after this date (`YYYY-MM-DD`) |
 | `-h`, `--help` | — | Show help message |
 
 ### Configuration
@@ -114,11 +122,20 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxx ./ghprofile --user dayvster
 # JSON output piped to jq
 ./ghprofile --user dayvster --json | jq '.profile.followers_amount'
 
-# Multiple users compared
-./ghprofile --user dayvster,torvalds --no-icons --size small
-
 # Custom config file
 ./ghprofile --user dayvster --config /path/to/config.json
+
+# Sort by most forked repos
+./ghprofile --user dayvster --sort forks
+
+# Only show repos updated since 2024
+./ghprofile --user dayvster --since 2024-01-01
+
+# Verbose mode (see API calls, timing, cache status)
+./ghprofile --user dayvster --verbose
+
+# Quiet mode (suppress all stderr warnings)
+./ghprofile --user dayvster --quiet
 ```
 
 ---

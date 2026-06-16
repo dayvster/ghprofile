@@ -9,11 +9,48 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type Github struct {
-	Client *http.Client
-	Token  string
+	Client             *http.Client
+	Token              string
+	Verbose            bool
+	Quiet              bool
+	RateLimitRemaining int
+	RateLimitReset     int64
+}
+
+func (gh *Github) logf(format string, args ...interface{}) {
+	if gh.Verbose {
+		fmt.Fprintf(os.Stderr, format, args...)
+	}
+}
+
+func (gh *Github) warnf(format string, args ...interface{}) {
+	if !gh.Quiet {
+		fmt.Fprintf(os.Stderr, format, args...)
+	}
+}
+
+func (gh *Github) captureRateLimit(headers http.Header) {
+	if v := headers.Get("X-RateLimit-Remaining"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			gh.RateLimitRemaining = n
+		}
+	}
+	if v := headers.Get("X-RateLimit-Reset"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			gh.RateLimitReset = n
+		}
+	}
+	if gh.RateLimitRemaining >= 0 && gh.RateLimitRemaining < 10 {
+		gh.warnf("warning: only %d GitHub API requests remaining\n", gh.RateLimitRemaining)
+	}
 }
 
 type Profile struct {
@@ -55,21 +92,22 @@ type ContributionCalendar struct {
 }
 
 type Repo struct {
-	ID              int    `json:"id,omitempty"`
-	Name            string `json:"name,omitempty"`
-	FullName        string `json:"full_name,omitempty"`
-	HTMLURL         string `json:"html_url,omitempty"`
-	Description     string `json:"description,omitempty"`
-	StargazersCount int    `json:"stargazers_count,omitempty"`
-	ForksCount      int    `json:"forks_count,omitempty"`
-	WatchersCount   int    `json:"watchers_count,omitempty"`
-	Language        string `json:"language,omitempty"`
-	Size            int    `json:"size,omitempty"`
-	OpenIssuesCount int    `json:"open_issues_count,omitempty"`
-	CreatedAt       string `json:"created_at,omitempty"`
-	UpdatedAt       string `json:"updated_at,omitempty"`
-	Fork            bool   `json:"fork,omitempty"`
-	DefaultBranch   string `json:"default_branch,omitempty"`
+	ID              int            `json:"id,omitempty"`
+	Name            string         `json:"name,omitempty"`
+	FullName        string         `json:"full_name,omitempty"`
+	HTMLURL         string         `json:"html_url,omitempty"`
+	Description     string         `json:"description,omitempty"`
+	StargazersCount int            `json:"stargazers_count,omitempty"`
+	ForksCount      int            `json:"forks_count,omitempty"`
+	WatchersCount   int            `json:"watchers_count,omitempty"`
+	Language        string         `json:"language,omitempty"`
+	Size            int            `json:"size,omitempty"`
+	OpenIssuesCount int            `json:"open_issues_count,omitempty"`
+	CreatedAt       string         `json:"created_at,omitempty"`
+	UpdatedAt       string         `json:"updated_at,omitempty"`
+	Fork            bool           `json:"fork,omitempty"`
+	DefaultBranch   string         `json:"default_branch,omitempty"`
+	Languages       map[string]int `json:"languages,omitempty"`
 }
 
 func (gh *Github) doRequest(ctx context.Context, method, urlStr string) ([]byte, error) {
@@ -85,11 +123,20 @@ func (gh *Github) doRequest(ctx context.Context, method, urlStr string) ([]byte,
 	if gh.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+gh.Token)
 	}
+
+	gh.logf("[verbose] %s %s\n", method, urlStr)
+	start := time.Now()
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("do: %w", err)
 	}
 	defer resp.Body.Close()
+
+	elapsed := time.Since(start)
+	gh.logf("[verbose] %s %s -> %d (%v)\n", method, urlStr, resp.StatusCode, elapsed)
+	gh.captureRateLimit(resp.Header)
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("read body: %w", err)
@@ -193,6 +240,77 @@ func (gh *Github) calcRepoStats(p *Profile, repos []Repo) {
 	}
 }
 
+func (gh *Github) FetchRepoLanguages(ctx context.Context, owner, repo string) (map[string]int, error) {
+	u := fmt.Sprintf("https://api.github.com/repos/%s/%s/languages", url.PathEscape(owner), url.PathEscape(repo))
+	body, err := gh.doRequest(ctx, http.MethodGet, u)
+	if err != nil {
+		return nil, err
+	}
+	var langs map[string]int
+	if err := json.Unmarshal(body, &langs); err != nil {
+		return nil, fmt.Errorf("unmarshal languages: %w", err)
+	}
+	return langs, nil
+}
+
+const (
+	SortByStars   = "stars"
+	SortByForks   = "forks"
+	SortByName    = "name"
+	SortByUpdated = "updated"
+)
+
+func SortRepos(repos []Repo, sortBy string) {
+	sort.Slice(repos, func(i, j int) bool {
+		switch sortBy {
+		case SortByForks:
+			return repos[i].ForksCount > repos[j].ForksCount
+		case SortByName:
+			return repos[i].Name < repos[j].Name
+		case SortByUpdated:
+			return repos[i].UpdatedAt > repos[j].UpdatedAt
+		default:
+			return repos[i].StargazersCount > repos[j].StargazersCount
+		}
+	})
+}
+
+func FilterSince(repos []Repo, since string) []Repo {
+	if since == "" {
+		return repos
+	}
+	sinceTime, err := time.Parse("2006-01-02", since)
+	if err != nil {
+		return repos
+	}
+	var filtered []Repo
+	for _, r := range repos {
+		updated, err := time.Parse(time.RFC3339, r.UpdatedAt)
+		if err != nil {
+			continue
+		}
+		if updated.After(sinceTime) || updated.Equal(sinceTime) {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
+}
+
+func (gh *Github) FetchLanguagesForRepos(ctx context.Context, repos []Repo) {
+	for i := range repos {
+		parts := strings.SplitN(repos[i].FullName, "/", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		langs, err := gh.FetchRepoLanguages(ctx, parts[0], parts[1])
+		if err != nil {
+			gh.warnf("warning: failed to fetch languages for %s: %v\n", repos[i].FullName, err)
+			continue
+		}
+		repos[i].Languages = langs
+	}
+}
+
 const contributionsQuery = `
 query($username: String!) {
   user(login: $username) {
@@ -238,11 +356,19 @@ func (gh *Github) doGraphQL(ctx context.Context, query string, vars map[string]i
 	if client == nil {
 		client = http.DefaultClient
 	}
+
+	gh.logf("[verbose] POST https://api.github.com/graphql\n")
+	start := time.Now()
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("graphql do: %w", err)
 	}
 	defer resp.Body.Close()
+
+	elapsed := time.Since(start)
+	gh.logf("[verbose] POST https://api.github.com/graphql -> %d (%v)\n", resp.StatusCode, elapsed)
+	gh.captureRateLimit(resp.Header)
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {

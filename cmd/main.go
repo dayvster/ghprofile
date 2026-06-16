@@ -38,6 +38,12 @@ Flags:
 	--demo            Force demo data (skip network and cache)
 	--size            Output size: small, medium, large, full (default: medium)
 	--tui             Use interactive TUI mode (default: true)
+	--verbose         Print API request URLs, timing, cache info to stderr
+	-v                Shorthand for --verbose
+	--quiet           Suppress stderr warning messages
+	-q                Shorthand for --quiet
+	--sort            Sort repos by: stars, forks, name, updated (default: stars)
+	--since           Only show repos updated after this date (YYYY-MM-DD)
 	-h, --help        Show this help message`)
 	}
 	userLong := flag.String("user", "", "GitHub username(s) to fetch (comma-separated)")
@@ -54,14 +60,22 @@ Flags:
 	noStyle := flag.Bool("no-style", false, "Remove all styles from output")
 	size := flag.String("size", "medium", "Output size: small, medium, large, full")
 	tui := flag.Bool("tui", true, "Use interactive TUI mode")
+	verboseLong := flag.Bool("verbose", false, "Print API request URLs, timing, cache info to stderr")
+	verboseShort := flag.Bool("v", false, "Shorthand for --verbose")
+	quietLong := flag.Bool("quiet", false, "Suppress stderr warning messages")
+	quietShort := flag.Bool("q", false, "Shorthand for --quiet")
+	sortBy := flag.String("sort", "stars", "Sort repos by: stars, forks, name, updated")
+	since := flag.String("since", "", "Only show repos updated after this date (YYYY-MM-DD)")
 	flag.Parse()
+
+	isVerbose := *verboseLong || *verboseShort
+	isQuiet := *quietLong || *quietShort
 
 	user := *userLong
 	if *userShort != "" {
 		user = *userShort
 	}
 
-	// If no user provided and not running in demo mode, require --user
 	if user == "" && !*demo {
 		fmt.Fprintln(os.Stderr, "error: --user is required unless --demo is set")
 		flag.Usage()
@@ -84,14 +98,17 @@ Flags:
 		}
 	}
 
-	gh := &github.Github{Client: http.DefaultClient}
+	gh := &github.Github{
+		Client:  http.DefaultClient,
+		Verbose: isVerbose,
+		Quiet:   isQuiet,
+	}
 	if token != "" {
 		gh.Token = token
 	}
 
 	useJSON := *jsonFlag || *format == "json"
 
-	// Parse comma-separated usernames
 	users := strings.Split(user, ",")
 	for i := range users {
 		users[i] = strings.TrimSpace(users[i])
@@ -105,40 +122,59 @@ Flags:
 		}
 	}
 
+	verbosePrint := func(format string, args ...interface{}) {
+		if isVerbose {
+			fmt.Fprintf(os.Stderr, format, args...)
+		}
+	}
+
+	quietPrint := func(format string, args ...interface{}) {
+		if !isQuiet {
+			fmt.Fprintf(os.Stderr, format, args...)
+		}
+	}
+
 	fetchUser := func(username string) (*github.Profile, []github.Repo) {
 		if *demo {
 			p, repos := github.DemoProfile(github.DemoProfileConfig{Username: username})
 			return p, repos
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
+		cacheStart := time.Now()
 		p, repos, err := gh.FetchProfileWithRepos(ctx, username)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "warning: fetch failed for %s: %v\n", username, err)
-			if *noDemo {
-				if cp, cr, cerr := github.TryLoadCache(username); cerr == nil {
-					fmt.Fprintf(os.Stderr, "loaded cached profile for %s\n", username)
-					p, repos = cp, cr
-				} else {
-					fmt.Fprintf(os.Stderr, "no cache available and --no-demo set; exiting\n")
-					os.Exit(1)
-				}
+			if cp, cr, cerr := github.TryLoadCache(username); cerr == nil {
+				quietPrint("warning: fetch failed — using cached data for %s\n", username)
+				verbosePrint("[verbose] cache hit for %s (%.0fs old)\n", username, time.Since(cacheStart).Seconds())
+				p, repos = cp, cr
+			} else if *noDemo {
+				quietPrint("no cache available and --no-demo set; exiting\n")
+				os.Exit(1)
 			} else {
-				if cp, cr, cerr := github.TryLoadCache(username); cerr == nil {
-					fmt.Fprintf(os.Stderr, "warning: fetch failed — using cached data for %s\n", username)
-					p, repos = cp, cr
-				} else {
-					fmt.Fprintf(os.Stderr, "warning: fetch failed (%v) — falling back to demo data for %s\n", err, username)
-					p, repos = github.DemoProfile(github.DemoProfileConfig{Username: username})
-				}
+				quietPrint("warning: fetch failed (%v) — falling back to demo data for %s\n", err, username)
+				p, repos = github.DemoProfile(github.DemoProfileConfig{Username: username})
 			}
 		} else {
 			if err := github.SaveCache(username, p, repos); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: failed to save cache: %v\n", err)
+				verbosePrint("[verbose] cache write failed for %s: %v\n", username, err)
+			} else {
+				verbosePrint("[verbose] cache saved for %s\n", username)
 			}
 		}
+
+		repos = github.FilterSince(repos, *since)
+		github.SortRepos(repos, *sortBy)
+
+		if !*demo {
+			langCtx, langCancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer langCancel()
+			verbosePrint("[verbose] fetching language breakdown for %d repos...\n", len(repos))
+			gh.FetchLanguagesForRepos(langCtx, repos)
+		}
+
 		return p, repos
 	}
 

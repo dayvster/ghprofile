@@ -68,41 +68,83 @@ func FormatProfile(p *github.Profile, repos []github.Repo, topN int, showIcons b
 		b.WriteString(Accent.Render(padded) + " " + ValueStyle.Render(s.value) + "\n")
 	}
 
-	langCount := map[string]int{}
-	for _, r := range repos {
-		lang := r.Language
-		if lang == "" {
-			continue
-		}
-		langCount[lang]++
-	}
 	if p.ContributionCalendar != nil {
 		b.WriteString(renderContributions(p.ContributionCalendar, iconRender))
 	}
 
-	if len(langCount) > 0 {
-		b.WriteString("\n")
-		b.WriteString(Subtle.Render("Languages:") + "\n")
-		type kv struct {
-			k string
-			v int
-		}
-		var kvs []kv
-		for k, v := range langCount {
-			kvs = append(kvs, kv{k, v})
-		}
-		sort.Slice(kvs, func(i, j int) bool { return kvs[i].v > kvs[j].v })
-		for _, x := range kvs {
-			icon := GetLangIcon(x.k)
-			out := fmt.Sprintf("%s  %s: %d\n", iconRender(icon), Accent.Render(x.k), x.v)
-			if icon == "" {
-				out = fmt.Sprintf("   %s: %d\n", Accent.Render(x.k), x.v)
-			}
-			b.WriteString(out)
+	type langEntry struct {
+		name  string
+		bytes int
+		count int
+	}
+
+	var langs []langEntry
+	hasByteData := false
+
+	for _, r := range repos {
+		if r.Languages != nil {
+			hasByteData = true
+			break
 		}
 	}
 
-	sort.Slice(repos, func(i, j int) bool { return repos[i].StargazersCount > repos[j].StargazersCount })
+	if hasByteData {
+		langBytes := map[string]int{}
+		for _, r := range repos {
+			for lang, bytes := range r.Languages {
+				langBytes[lang] += bytes
+			}
+		}
+		totalBytes := 0
+		for _, bytes := range langBytes {
+			totalBytes += bytes
+		}
+		for name, bytes := range langBytes {
+			langs = append(langs, langEntry{name: name, bytes: bytes})
+		}
+		sort.Slice(langs, func(i, j int) bool { return langs[i].bytes > langs[j].bytes })
+
+		if totalBytes > 0 && len(langs) > 0 {
+			b.WriteString("\n")
+			b.WriteString(Subtle.Render("Languages:") + "\n")
+			for _, x := range langs {
+				pct := float64(x.bytes) / float64(totalBytes) * 100
+				icon := GetLangIcon(x.name)
+				out := fmt.Sprintf("%s  %s: %.1f%%\n", iconRender(icon), Accent.Render(x.name), pct)
+				if icon == "" {
+					out = fmt.Sprintf("   %s: %.1f%%\n", Accent.Render(x.name), pct)
+				}
+				b.WriteString(out)
+			}
+		}
+	} else {
+		langCount := map[string]int{}
+		for _, r := range repos {
+			lang := r.Language
+			if lang == "" {
+				continue
+			}
+			langCount[lang]++
+		}
+		for name, count := range langCount {
+			langs = append(langs, langEntry{name: name, count: count})
+		}
+		sort.Slice(langs, func(i, j int) bool { return langs[i].count > langs[j].count })
+
+		if len(langs) > 0 {
+			b.WriteString("\n")
+			b.WriteString(Subtle.Render("Languages:") + "\n")
+			for _, x := range langs {
+				icon := GetLangIcon(x.name)
+				out := fmt.Sprintf("%s  %s: %d\n", iconRender(icon), Accent.Render(x.name), x.count)
+				if icon == "" {
+					out = fmt.Sprintf("   %s: %d\n", Accent.Render(x.name), x.count)
+				}
+				b.WriteString(out)
+			}
+		}
+	}
+
 	if topN > len(repos) {
 		topN = len(repos)
 	}
