@@ -39,18 +39,9 @@ func TestFetchProfileAndRepos(t *testing.T) {
 		if err != nil {
 			t.Fatalf("integration fetch error: %v", err)
 		}
-		totalStars := 0
-		if p.TotalStars != nil {
-			totalStars = *p.TotalStars
-		}
-		totalForks := 0
-		if p.TotalForks != nil {
-			totalForks = *p.TotalForks
-		}
-		avg := float32(0)
-		if p.AvgStarsPerRepo != nil {
-			avg = *p.AvgStarsPerRepo
-		}
+		totalStars := p.TotalStars
+		totalForks := p.TotalForks
+		avg := p.AvgStarsPerRepo
 		t.Logf("Profile: %s (%s)", p.FullName, p.URL)
 		t.Logf("Public repos: %d, total stars: %d, total forks: %d, avg stars/repo: %.2f", p.PublicReposAmount, totalStars, totalForks, avg)
 		t.Logf("Fetched %d repos", len(repos))
@@ -124,14 +115,14 @@ func runProfileAndReposTests(t *testing.T, gh *Github, ctx context.Context, user
 	if err != nil {
 		t.Fatalf("FetchProfileWithRepos error: %v", err)
 	}
-	if p2.TotalStars == nil || *p2.TotalStars != 8 {
-		t.Fatalf("expected total stars 8 got %v", p2.TotalStars)
+	if p2.TotalStars != 8 {
+		t.Fatalf("expected total stars 8 got %d", p2.TotalStars)
 	}
-	if p2.TotalForks == nil || *p2.TotalForks != 3 {
-		t.Fatalf("expected total forks 3 got %v", p2.TotalForks)
+	if p2.TotalForks != 3 {
+		t.Fatalf("expected total forks 3 got %d", p2.TotalForks)
 	}
-	if p2.AvgStarsPerRepo == nil || *p2.AvgStarsPerRepo != 4.0 {
-		t.Fatalf("expected avg 4.0 got %v", p2.AvgStarsPerRepo)
+	if p2.AvgStarsPerRepo != 4.0 {
+		t.Fatalf("expected avg 4.0 got %f", p2.AvgStarsPerRepo)
 	}
 	if len(repos2) != 2 {
 		t.Fatalf("expected repos2 len 2 got %d", len(repos2))

@@ -1,6 +1,7 @@
 # Go build
 /bin/
 /ghprofile
+/main
 *.exe
 *.out
 *.test
@@ -23,3 +24,6 @@ release-bin/
 ghprofile-*
 
 packaging/
+
+# Notes
+notes/

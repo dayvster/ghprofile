@@ -31,14 +31,10 @@ func DemoProfile(cfg DemoProfileConfig) (*Profile, []Repo) {
 		totalStars += r.StargazersCount
 		totalForks += r.ForksCount
 	}
-	p.TotalStars = new(int)
-	*p.TotalStars = totalStars
-	p.TotalForks = new(int)
-	*p.TotalForks = totalForks
+	p.TotalStars = totalStars
+	p.TotalForks = totalForks
 	if len(repos) > 0 {
-		tmp := float32(totalStars) / float32(len(repos))
-		p.AvgStarsPerRepo = new(float32)
-		*p.AvgStarsPerRepo = tmp
+		p.AvgStarsPerRepo = float32(totalStars) / float32(len(repos))
 	}
 	return p, repos
 }

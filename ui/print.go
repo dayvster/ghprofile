@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,9 +12,12 @@ import (
 )
 
 func PrintProfile(p *github.Profile, repos []github.Repo, topN int, showIcons bool, noBorder bool, noStyle bool, size string) {
+	fmt.Print(FormatProfile(p, repos, topN, showIcons, noBorder, noStyle, size))
+}
+
+func FormatProfile(p *github.Profile, repos []github.Repo, topN int, showIcons bool, noBorder bool, noStyle bool, size string) string {
 	if p == nil {
-		fmt.Println("No profile")
-		return
+		return "No profile\n"
 	}
 
 	var b strings.Builder
@@ -35,18 +39,9 @@ func PrintProfile(p *github.Profile, repos []github.Repo, topN int, showIcons bo
 	}
 	b.WriteString("\n")
 	type statEntry struct{ icon, label, value string }
-	totalStars := 0
-	totalForks := 0
-	if p.TotalStars != nil {
-		totalStars = *p.TotalStars
-	}
-	if p.TotalForks != nil {
-		totalForks = *p.TotalForks
-	}
-	avg := float32(0)
-	if p.AvgStarsPerRepo != nil {
-		avg = *p.AvgStarsPerRepo
-	}
+	totalStars := p.TotalStars
+	totalForks := p.TotalForks
+	avg := p.AvgStarsPerRepo
 
 	stats := []statEntry{
 		{iconRender(IconFollowers), "Followers:", fmt.Sprintf("%d", p.FollowersAmount)},
@@ -77,10 +72,14 @@ func PrintProfile(p *github.Profile, repos []github.Repo, topN int, showIcons bo
 	for _, r := range repos {
 		lang := r.Language
 		if lang == "" {
-			continue // ignore repos with no language
+			continue
 		}
 		langCount[lang]++
 	}
+	if p.ContributionCalendar != nil {
+		b.WriteString(renderContributions(p.ContributionCalendar, iconRender))
+	}
+
 	if len(langCount) > 0 {
 		b.WriteString("\n")
 		b.WriteString(Subtle.Render("Languages:") + "\n")
@@ -129,11 +128,9 @@ func PrintProfile(p *github.Profile, repos []github.Repo, topN int, showIcons bo
 
 	out := b.String()
 	if noStyle || noBorder {
-		fmt.Print(out)
-		return
+		return out
 	}
 
-	// Determine width from size flag. 0 means no width constraint (full).
 	width := 0
 	switch strings.ToLower(size) {
 	case "small":
@@ -149,5 +146,54 @@ func PrintProfile(p *github.Profile, repos []github.Repo, topN int, showIcons bo
 	}
 
 	panel := Panel(width).Render(out)
-	fmt.Println(lipgloss.NewStyle().Margin(1, 2).Render(panel))
+	return lipgloss.NewStyle().Margin(1, 2).Render(panel) + "\n"
+}
+
+func renderContributions(cal *github.ContributionCalendar, iconRender func(string) string) string {
+	if cal == nil || len(cal.Weeks) == 0 {
+		return ""
+	}
+	var buf strings.Builder
+	buf.WriteString("\n")
+	buf.WriteString(Subtle.Render("Contributions:") + "\n")
+	buf.WriteString(fmt.Sprintf("%s %s %d\n", iconRender(IconStar), Accent.Render("Total:"), cal.TotalContributions))
+
+	weekly := make([]int, len(cal.Weeks))
+	maxW := 0
+	for i, w := range cal.Weeks {
+		s := 0
+		for _, d := range w.Days {
+			s += d.Count
+		}
+		weekly[i] = s
+		if s > maxW {
+			maxW = s
+		}
+	}
+
+	if maxW > 0 {
+		chars := []rune("▁▂▃▄▅▆▇█")
+		for _, s := range weekly {
+			l := int(float64(s) / float64(maxW) * 7)
+			if l > 7 {
+				l = 7
+			}
+			buf.WriteRune(chars[l])
+		}
+		buf.WriteString("\n")
+	}
+
+	return buf.String()
+}
+
+func RenderJSON(p *github.Profile, repos []github.Repo) string {
+	data := struct {
+		Profile *github.Profile `json:"profile"`
+		Repos   []github.Repo   `json:"repos"`
+	}{p, repos}
+	b, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Sprintf(`{"error":%q}`, err)
+	}
+	return string(b)
 }

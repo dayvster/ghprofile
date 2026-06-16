@@ -1,6 +1,7 @@
 package github
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,29 +13,45 @@ import (
 
 type Github struct {
 	Client *http.Client
+	Token  string
 }
 
 type Profile struct {
-	Name              string    `json:"name,omitempty"`
-	AvatarURL         string    `json:"avatar_url,omitempty"`
-	URL               string    `json:"url,omitempty"`
-	FullName          string    `json:"full_name,omitempty"`
-	Company           string    `json:"company,omitempty"`
-	Blog              string    `json:"blog,omitempty"`
-	Bio               string    `json:"bio,omitempty"`
-	Twitter           string    `json:"twitter,omitempty"`
-	FollowersAmount   int       `json:"followers_amount,omitempty"`
-	FollowingAmount   int       `json:"following_amount,omitempty"`
-	MemberSince       string    `json:"member_since,omitempty"`
-	Hireable          bool      `json:"hireable,omitempty"`
-	Email             string    `json:"email,omitempty"`
-	PublicReposAmount int       `json:"public_repos_amount,omitempty"`
-	PublicGistsAmount int       `json:"public_gists_amount,omitempty"`
-	TotalStars        *int      `json:"total_stars,omitempty"`
-	TotalForks        *int      `json:"total_forks,omitempty"`
-	AvgStarsPerRepo   *float32  `json:"avg_stars_per_repo,omitempty"`
-	Repos             []Repo    `json:"repos,omitempty"`
-	Followers         []Profile `json:"followers,omitempty"`
+	Name                 string                `json:"name,omitempty"`
+	AvatarURL            string                `json:"avatar_url,omitempty"`
+	URL                  string                `json:"url,omitempty"`
+	FullName             string                `json:"full_name,omitempty"`
+	Company              string                `json:"company,omitempty"`
+	Blog                 string                `json:"blog,omitempty"`
+	Bio                  string                `json:"bio,omitempty"`
+	Twitter              string                `json:"twitter,omitempty"`
+	FollowersAmount      int                   `json:"followers_amount,omitempty"`
+	FollowingAmount      int                   `json:"following_amount,omitempty"`
+	MemberSince          string                `json:"member_since,omitempty"`
+	Hireable             bool                  `json:"hireable,omitempty"`
+	Email                string                `json:"email,omitempty"`
+	PublicReposAmount    int                   `json:"public_repos_amount,omitempty"`
+	PublicGistsAmount    int                   `json:"public_gists_amount,omitempty"`
+	TotalStars           int                   `json:"total_stars,omitempty"`
+	TotalForks           int                   `json:"total_forks,omitempty"`
+	AvgStarsPerRepo      float32               `json:"avg_stars_per_repo,omitempty"`
+	Repos                []Repo                `json:"repos,omitempty"`
+	ContributionCalendar *ContributionCalendar `json:"contribution_calendar,omitempty"`
+}
+
+type ContributionDay struct {
+	Count int    `json:"contributionCount"`
+	Date  string `json:"date"`
+	Color string `json:"color"`
+}
+
+type ContributionWeek struct {
+	Days []ContributionDay `json:"contributionDays"`
+}
+
+type ContributionCalendar struct {
+	TotalContributions int                `json:"totalContributions"`
+	Weeks              []ContributionWeek `json:"weeks"`
 }
 
 type Repo struct {
@@ -65,6 +82,9 @@ func (gh *Github) doRequest(ctx context.Context, method, urlStr string) ([]byte,
 		return nil, fmt.Errorf("request: %w", err)
 	}
 	req.Header.Set("User-Agent", "ghprofile-client")
+	if gh.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+gh.Token)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("do: %w", err)
@@ -166,15 +186,108 @@ func (gh *Github) calcRepoStats(p *Profile, repos []Repo) {
 		totalStars += r.StargazersCount
 		totalForks += r.ForksCount
 	}
+	p.TotalStars = totalStars
+	p.TotalForks = totalForks
 	if len(repos) > 0 {
-		avg := float32(totalStars) / float32(len(repos))
-		p.AvgStarsPerRepo = new(float32)
-		*p.AvgStarsPerRepo = avg
+		p.AvgStarsPerRepo = float32(totalStars) / float32(len(repos))
 	}
-	p.TotalStars = new(int)
-	*p.TotalStars = totalStars
-	p.TotalForks = new(int)
-	*p.TotalForks = totalForks
+}
+
+const contributionsQuery = `
+query($username: String!) {
+  user(login: $username) {
+    contributionsCollection {
+      contributionCalendar {
+        totalContributions
+        weeks {
+          contributionDays {
+            contributionCount
+            date
+            color
+          }
+        }
+      }
+    }
+  }
+}
+`
+
+func (gh *Github) doGraphQL(ctx context.Context, query string, vars map[string]interface{}) ([]byte, error) {
+	body := map[string]interface{}{
+		"query":     query,
+		"variables": vars,
+	}
+	b, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("graphql marshal: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.github.com/graphql", bytes.NewReader(b))
+	if err != nil {
+		return nil, fmt.Errorf("graphql request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "ghprofile-client")
+	if gh.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+gh.Token)
+	} else {
+		return nil, fmt.Errorf("graphql requires authentication")
+	}
+
+	client := gh.Client
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("graphql do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("graphql read: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("graphql: %s", string(bodyBytes))
+	}
+
+	return bodyBytes, nil
+}
+
+func (gh *Github) FetchContributions(ctx context.Context, username string) (*ContributionCalendar, error) {
+	if gh.Token == "" {
+		return nil, nil
+	}
+
+	body, err := gh.doGraphQL(ctx, contributionsQuery, map[string]interface{}{"username": username})
+	if err != nil {
+		return nil, err
+	}
+
+	var resp struct {
+		Data struct {
+			User struct {
+				ContributionsCollection struct {
+					ContributionCalendar ContributionCalendar `json:"contributionCalendar"`
+				} `json:"contributionsCollection"`
+			} `json:"user"`
+		} `json:"data"`
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, fmt.Errorf("contributions unmarshal: %w", err)
+	}
+
+	if len(resp.Errors) > 0 {
+		return nil, fmt.Errorf("graphql errors: %s", resp.Errors[0].Message)
+	}
+
+	return &resp.Data.User.ContributionsCollection.ContributionCalendar, nil
 }
 
 func (gh *Github) FetchProfileWithRepos(ctx context.Context, username string) (*Profile, []Repo, error) {
@@ -187,5 +300,11 @@ func (gh *Github) FetchProfileWithRepos(ctx context.Context, username string) (*
 		return p, nil, err
 	}
 	gh.calcRepoStats(p, repos)
+
+	cal, err := gh.FetchContributions(ctx, username)
+	if err == nil && cal != nil {
+		p.ContributionCalendar = cal
+	}
+
 	return p, repos, nil
 }

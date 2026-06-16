@@ -1,6 +1,6 @@
 <div align="center">
 
-# ghprofile 
+# ghprofile
 
 A beautiful, customizable GitHub profile viewer for your terminal.
 
@@ -8,13 +8,13 @@ A beautiful, customizable GitHub profile viewer for your terminal.
 
 <p>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
-  <img src="https://img.shields.io/badge/go-1.21+-00ADD8.svg" alt="Go Version">
-  <img src="https://img.shields.io/github/stars/dayvster/ghrepo?style=social" alt="GitHub stars">
-  <img src="https://img.shields.io/github/downloads/dayvster/ghrepo/total.svg" alt="Downloads">
-  <img src="https://img.shields.io/github/issues/dayvster/ghrepo.svg" alt="Issues">
-  <img src="https://img.shields.io/github/forks/dayvster/ghrepo.svg" alt="Forks">
-  <img src="https://img.shields.io/github/repo-size/dayvster/ghrepo.svg" alt="Repo size">
-  <img src="https://img.shields.io/github/last-commit/dayvster/ghrepo.svg" alt="Last commit">
+  <img src="https://img.shields.io/badge/go-1.25+-00ADD8.svg" alt="Go Version">
+  <img src="https://img.shields.io/github/stars/dayvster/ghprofile?style=social" alt="GitHub stars">
+  <img src="https://img.shields.io/github/downloads/dayvster/ghprofile/total.svg" alt="Downloads">
+  <img src="https://img.shields.io/github/issues/dayvster/ghprofile.svg" alt="Issues">
+  <img src="https://img.shields.io/github/forks/dayvster/ghprofile.svg" alt="Forks">
+  <img src="https://img.shields.io/github/repo-size/dayvster/ghprofile.svg" alt="Repo size">
+  <img src="https://img.shields.io/github/last-commit/dayvster/ghprofile.svg" alt="Last commit">
 </p>
 
 </div>
@@ -22,52 +22,116 @@ A beautiful, customizable GitHub profile viewer for your terminal.
 ---
 
 ## Features
-- ✨ Fetch and display GitHub user profiles and top repositories
-- 📊 Shows language stats, repo stars, forks, and more
-- 🎨 Icon-rich output (with options for plain text)
-- ⚡ Caching and demo mode for offline/limited API use
-- 🛠️ CLI flags for customization
+
+- Fetch and display GitHub user profiles and top repositories
+- Language stats, repo stars, forks, and more
+- Contribution graph (requires GitHub token)
+- Compare multiple users at once
+- Icon-rich output with Nerd Font support
+- JSON output for piping
+- Caching and demo mode for offline/limited API use
+- Config file for persistent token storage
+- TUI mode with Bubble Tea
+
+---
+
+## Installation
+
+```sh
+go build -o ghprofile ./cmd/main.go
+```
 
 ---
 
 ## Usage
+
 ```sh
-./ghprofile [flags]
+./ghprofile --user <username> [flags]
+```
+
+### Basic
+
+```sh
+# Single user
+./ghprofile --user dayvster
+
+# With token (higher rate limit + contribution graph)
+./ghprofile --user dayvster --token ghp_xxxxxxxxxxxx
+
+# Compare multiple users
+./ghprofile --user dayvster,torvalds
+
+# JSON output
+./ghprofile --user dayvster --json
+
+# Plain text (no TUI, no icons, no borders)
+./ghprofile --user dayvster --tui=false --no-icons --no-border
+
+# Demo data (no network)
+./ghprofile --demo
 ```
 
 ### Flags
-- `-u`, `--user`        GitHub username to fetch (default: dayvster)
-- `-n`                  How many top repos to show (default: 5)
-- `--no-icons`          Disable icons in the output
-- `--no-border`         Remove card border from output
-- `--no-style`          Remove all styles from output
-- `--no-demo`           Do not fall back to demo data on fetch error; exit instead
-- `--demo`              Force demo data (skip network and cache)
-- `-h`, `--help`        Show help message
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-u`, `--user` | — | GitHub username(s) to fetch (comma-separated for multiple) |
+| `-n` | `5` | How many top repos to show |
+| `--token` | — | GitHub personal access token (or `GITHUB_TOKEN` env) |
+| `--config` | `~/.config/ghprofile/config.json` | Config file path |
+| `--json` | `false` | Output as JSON |
+| `--format` | `text` | Output format: `text`, `json` |
+| `--no-icons` | `false` | Disable icons in the output |
+| `--no-border` | `false` | Remove card border from output |
+| `--no-style` | `false` | Remove all styles from output |
+| `--no-demo` | `false` | Exit on fetch error instead of falling back to demo data |
+| `--demo` | `false` | Force demo data (skip network and cache) |
+| `--size` | `medium` | Output size: `small`, `medium`, `large`, `full` |
+| `--tui` | `true` | Use interactive TUI mode |
+| `-h`, `--help` | — | Show help message |
+
+### Configuration
+
+Token resolution priority:
+1. `--token` flag
+2. `GITHUB_TOKEN` environment variable
+3. Config file (`~/.config/ghprofile/config.json` or `$XDG_CONFIG_HOME/ghprofile/config.json`)
+
+```sh
+mkdir -p ~/.config/ghprofile
+echo '{"token": "ghp_xxxxxxxxxxxx"}' > ~/.config/ghprofile/config.json
+```
+
+### Examples
+
+```sh
+# Contribution graph (requires token)
+GITHUB_TOKEN=ghp_xxxxxxxxxxxx ./ghprofile --user dayvster
+
+# JSON output piped to jq
+./ghprofile --user dayvster --json | jq '.profile.followers_amount'
+
+# Multiple users compared
+./ghprofile --user dayvster,torvalds --no-icons --size small
+
+# Custom config file
+./ghprofile --user dayvster --config /path/to/config.json
+```
 
 ---
 
 ## Screenshots
+
 | Default | No Border | No Icons |
 |---------|-----------|----------|
 | ![ghprofile demo](screenshots/basic.png) | ![No border](screenshots/no-border.png) | ![No icons](screenshots/no-icons.png) |
 
 ---
 
-## Build
-```sh
-go build -o ghprofile ./cmd/main.go
-```
-
-## Example
-```sh
-./ghprofile --user dayvster --topN 5
-```
-
----
-
 ## License
+
 See [LICENSE](LICENSE).
 
 ## Contributing
+
 See [CONTRIBUTING.md](CONTRIBUTING.md).

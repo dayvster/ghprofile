@@ -9,6 +9,7 @@ package github
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 )
@@ -53,6 +54,14 @@ func TryLoadCache(user string) (*Profile, []Repo, error) {
 	path, err := CachePath(user)
 	if err != nil {
 		return nil, nil, err
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	if time.Since(info.ModTime()) > CacheExpire {
+		os.Remove(path)
+		return nil, nil, fmt.Errorf("cache expired for %s", user)
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
