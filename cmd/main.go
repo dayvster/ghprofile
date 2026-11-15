@@ -29,7 +29,7 @@ Flags:
 	-n                How many top repos to show (default: 5)
 	--token           GitHub personal access token (or GITHUB_TOKEN env)
 	--config          Config file path (default: ~/.config/ghprofile/config.json)
-	--theme           Color theme: nord, dracula, tokyonight, monokai, gruvbox, solarized, catppuccin, onelight
+	--theme           Color theme (see --list-themes for all options)
 	--list-themes     List available themes
 	--json            Output as JSON
 	--format          Output format: text, json (default: text)
@@ -42,8 +42,7 @@ Flags:
 	--tui             Use interactive TUI mode (default: true)
 	--verbose         Print API request URLs, timing, cache info to stderr
 	-v                Shorthand for --verbose
-	--quiet           Suppress stderr warning messages
-	-q                Shorthand for --quiet
+	--show-warnings   Show warning messages (suppressed by default)
 	--sort            Sort repos by: stars, forks, name, updated (default: stars)
 	--since           Only show repos updated after this date (YYYY-MM-DD)
 	-h, --help        Show this help message`)
@@ -66,8 +65,7 @@ Flags:
 	tui := flag.Bool("tui", true, "Use interactive TUI mode")
 	verboseLong := flag.Bool("verbose", false, "Print API request URLs, timing, cache info to stderr")
 	verboseShort := flag.Bool("v", false, "Shorthand for --verbose")
-	quietLong := flag.Bool("quiet", false, "Suppress stderr warning messages")
-	quietShort := flag.Bool("q", false, "Shorthand for --quiet")
+	showWarnings := flag.Bool("show-warnings", false, "Show warning messages (suppressed by default)")
 	sortBy := flag.String("sort", "stars", "Sort repos by: stars, forks, name, updated")
 	since := flag.String("since", "", "Only show repos updated after this date (YYYY-MM-DD)")
 	flag.Parse()
@@ -82,7 +80,7 @@ Flags:
 	}
 
 	isVerbose := *verboseLong || *verboseShort
-	isQuiet := *quietLong || *quietShort
+	shouldShowWarnings := *showWarnings
 
 	user := *userLong
 	if *userShort != "" {
@@ -121,7 +119,7 @@ Flags:
 	gh := &github.Github{
 		Client:  http.DefaultClient,
 		Verbose: isVerbose,
-		Quiet:   isQuiet,
+		Quiet:   !shouldShowWarnings,
 	}
 	if token != "" {
 		gh.Token = token
@@ -152,8 +150,8 @@ Flags:
 		}
 	}
 
-	quietPrint := func(format string, args ...interface{}) {
-		if !isQuiet {
+	warnPrint := func(format string, args ...interface{}) {
+		if shouldShowWarnings {
 			fmt.Fprintf(os.Stderr, format, args...)
 		}
 	}
@@ -171,14 +169,14 @@ Flags:
 		p, repos, err := gh.FetchProfileWithRepos(ctx, username)
 		if err != nil {
 			if cp, cr, cerr := github.TryLoadCache(username); cerr == nil {
-				quietPrint("warning: fetch failed — using cached data for %s\n", username)
+				warnPrint("warning: fetch failed — using cached data for %s\n", username)
 				verbosePrint("[verbose] cache hit for %s (%.0fs old)\n", username, time.Since(cacheStart).Seconds())
 				p, repos = cp, cr
 			} else if *noDemo {
-				quietPrint("no cache available and --no-demo set; exiting\n")
+				warnPrint("no cache available and --no-demo set; exiting\n")
 				os.Exit(1)
 			} else {
-				quietPrint("warning: fetch failed (%v) — falling back to demo data for %s\n", err, username)
+				warnPrint("warning: fetch failed (%v) — falling back to demo data for %s\n", err, username)
 				p, repos = github.DemoProfile(github.DemoProfileConfig{Username: username})
 			}
 		} else {
