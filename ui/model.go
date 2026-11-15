@@ -13,11 +13,16 @@ type model struct {
 	noBorder  bool
 	noStyle   bool
 	size      string
+	theme     string
 }
 
 type renderMsg struct{}
 
-func NewModel(p *github.Profile, repos []github.Repo, topN int, showIcons, noBorder, noStyle bool, size string) tea.Model {
+func NewModel(p *github.Profile, repos []github.Repo, topN int, showIcons, noBorder, noStyle bool, size string, theme string) tea.Model {
+	if theme != "" {
+		SetTheme(theme)
+		UpdateStyles()
+	}
 	return &model{
 		profile:   p,
 		repos:     repos,
@@ -26,6 +31,7 @@ func NewModel(p *github.Profile, repos []github.Repo, topN int, showIcons, noBor
 		noBorder:  noBorder,
 		noStyle:   noStyle,
 		size:      size,
+		theme:     theme,
 	}
 }
 

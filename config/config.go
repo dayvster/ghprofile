@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Token string `json:"token,omitempty"`
+	Theme string `json:"theme,omitempty"`
 }
 
 func Path() (string, error) {

@@ -29,6 +29,8 @@ Flags:
 	-n                How many top repos to show (default: 5)
 	--token           GitHub personal access token (or GITHUB_TOKEN env)
 	--config          Config file path (default: ~/.config/ghprofile/config.json)
+	--theme           Color theme: nord, dracula, tokyonight, monokai, gruvbox, solarized, catppuccin, onelight
+	--list-themes     List available themes
 	--json            Output as JSON
 	--format          Output format: text, json (default: text)
 	--no-icons        Disable icons in the output
@@ -51,6 +53,8 @@ Flags:
 	topN := flag.Int("n", 5, "How many top repos to show")
 	tokenFlag := flag.String("token", "", "GitHub personal access token (or GITHUB_TOKEN env)")
 	configFlag := flag.String("config", "", "Config file path (default: ~/.config/ghprofile/config.json)")
+	themeFlag := flag.String("theme", "", "Color theme")
+	listThemes := flag.Bool("list-themes", false, "List available themes")
 	jsonFlag := flag.Bool("json", false, "Output as JSON")
 	format := flag.String("format", "text", "Output format: text, json")
 	noIcons := flag.Bool("no-icons", false, "Disable icons in the output")
@@ -67,6 +71,15 @@ Flags:
 	sortBy := flag.String("sort", "stars", "Sort repos by: stars, forks, name, updated")
 	since := flag.String("since", "", "Only show repos updated after this date (YYYY-MM-DD)")
 	flag.Parse()
+
+	if *listThemes {
+		themes := ui.GetAvailableThemes()
+		fmt.Println("Available themes:")
+		for _, t := range themes {
+			fmt.Printf("  • %s\n", t)
+		}
+		os.Exit(0)
+	}
 
 	isVerbose := *verboseLong || *verboseShort
 	isQuiet := *quietLong || *quietShort
@@ -86,14 +99,21 @@ Flags:
 	if token == "" {
 		token = os.Getenv("GITHUB_TOKEN")
 	}
-	if token == "" {
+
+	theme := *themeFlag
+	if token == "" || theme == "" {
 		cfgPath := *configFlag
 		if cfgPath == "" {
 			cfgPath, _ = config.Path()
 		}
 		if cfgPath != "" {
-			if cfg, err := config.Load(cfgPath); err == nil && cfg.Token != "" {
-				token = cfg.Token
+			if cfg, err := config.Load(cfgPath); err == nil {
+				if token == "" && cfg.Token != "" {
+					token = cfg.Token
+				}
+				if theme == "" && cfg.Theme != "" {
+					theme = cfg.Theme
+				}
 			}
 		}
 	}
@@ -116,8 +136,12 @@ Flags:
 
 	render := func(p *github.Profile, repos []github.Repo) {
 		if *tui {
-			tea.NewProgram(ui.NewModel(p, repos, *topN, !*noIcons, *noBorder, *noStyle, *size)).Run()
+			tea.NewProgram(ui.NewModel(p, repos, *topN, !*noIcons, *noBorder, *noStyle, *size, theme)).Run()
 		} else {
+			if theme != "" {
+				ui.SetTheme(theme)
+				ui.UpdateStyles()
+			}
 			ui.PrintProfile(p, repos, *topN, !*noIcons, *noBorder, *noStyle, *size)
 		}
 	}
