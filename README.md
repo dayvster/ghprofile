@@ -1,152 +1,85 @@
-<div align="center">
-
 # ghprofile
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/go-1.25+-00ADD8.svg)](https://golang.org/)
 
 A beautiful, customizable GitHub profile viewer for your terminal.
 
----
-
-<p>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
-  <img src="https://img.shields.io/badge/go-1.25+-00ADD8.svg" alt="Go Version">
-  <img src="https://img.shields.io/github/stars/dayvster/ghprofile?style=social" alt="GitHub stars">
-  <img src="https://img.shields.io/github/downloads/dayvster/ghprofile/total.svg" alt="Downloads">
-  <img src="https://img.shields.io/github/issues/dayvster/ghprofile.svg" alt="Issues">
-  <img src="https://img.shields.io/github/forks/dayvster/ghprofile.svg" alt="Forks">
-  <img src="https://img.shields.io/github/repo-size/dayvster/ghprofile.svg" alt="Repo size">
-  <img src="https://img.shields.io/github/last-commit/dayvster/ghprofile.svg" alt="Last commit">
-</p>
-
-</div>
-
----
-
-<img width="1426" height="1083" alt="image" src="https://github.com/user-attachments/assets/6e0aff20-7d3d-44af-8703-97c202a52199" />
+![ghprofile demo](https://github.com/user-attachments/assets/6e0aff20-7d3d-44af-8703-97c202a52199)
 
 
 ## Features
 
-- Fetch and display GitHub user profiles and top repositories
-- Language stats, repo stars, forks, and more
-- Contribution graph (requires GitHub token)
-- Compare multiple users at once
-- Sort and filter repositories
-- Language byte breakdown (accurate percentages across all repos)
-- Rate-limit awareness (auto-warns at low quota)
-- Verbose/quiet output modes
-- Icon-rich output with Nerd Font support
-- JSON output for piping
-- Caching and demo mode for offline/limited API use
-- Config file for persistent token storage
-- TUI mode with Bubble Tea
+- **Profile & repos**: Fetch user profiles, top repos, language stats
+- **Contribution graph**: Shows activity (requires token)
+- **Compare users**: Side-by-side profile comparison
+- **Flexible output**: JSON, text, TUI, or plain formats
+- **Smart caching**: Offline mode + rate-limit awareness
+- **Customizable**: Icons, borders, sizes, sorting, filtering
+- **Config file**: Persistent token storage
 
----
-
-## Installation
+## Quick Start
 
 ```sh
 go build -o ghprofile ./cmd/main.go
+./ghprofile --user dayvster
 ```
 
----
+With token (higher rate limit + contribution graph):
+```sh
+./ghprofile --user dayvster --token ghp_xxxxxxxxxxxx
+```
 
 ## Usage
+
+### Common Options
 
 ```sh
 ./ghprofile --user <username> [flags]
 ```
 
-### Basic
-
+Examples:
 ```sh
-# Single user
-./ghprofile --user dayvster
-
-# With token (higher rate limit + contribution graph)
-./ghprofile --user dayvster --token ghp_xxxxxxxxxxxx
-
-# Compare multiple users
-./ghprofile --user user1,user2
-
-# JSON output
-./ghprofile --user dayvster --json
-
-# Plain text (no TUI, no icons, no borders)
-./ghprofile --user dayvster --tui=false --no-icons --no-border
-
-# Demo data (no network)
-./ghprofile --demo
+./ghprofile --user dayvster --json              # JSON output
+./ghprofile --user user1,user2                  # Compare multiple
+./ghprofile --demo                              # Demo mode (no network)
+./ghprofile --user dayvster --sort forks        # Sort by forks
 ```
 
-### Flags
+### All Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-u`, `--user` | — | GitHub username(s) to fetch (comma-separated for multiple) |
-| `-n` | `5` | How many top repos to show |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-u`, `--user` | — | GitHub username(s) (comma-separated for multiple) |
+| `-n` | `5` | Top repos to show |
 | `--token` | — | GitHub personal access token (or `GITHUB_TOKEN` env) |
-| `--config` | `~/.config/ghprofile/config.json` | Config file path |
+| `--sort` | `stars` | Sort by: `stars`, `forks`, `name`, `updated` |
 | `--json` | `false` | Output as JSON |
-| `--format` | `text` | Output format: `text`, `json` |
-| `--no-icons` | `false` | Disable icons in the output |
-| `--no-border` | `false` | Remove card border from output |
-| `--no-style` | `false` | Remove all styles from output |
-| `--no-demo` | `false` | Exit on fetch error instead of falling back to demo data |
-| `--demo` | `false` | Force demo data (skip network and cache) |
+| `--tui` | `true` | Interactive TUI mode |
+| `--demo` | `false` | Demo mode (no network) |
+| `--no-icons` | `false` | Disable icons |
+| `--no-border` | `false` | Remove card border |
+| `--no-style` | `false` | Remove all styling |
 | `--size` | `medium` | Output size: `small`, `medium`, `large`, `full` |
-| `--tui` | `true` | Use interactive TUI mode |
-| `--verbose`, `-v` | `false` | Print API request URLs, timing, cache info to stderr |
-| `--quiet`, `-q` | `false` | Suppress stderr warning messages |
-| `--sort` | `stars` | Sort repos by: `stars`, `forks`, `name`, `updated` |
-| `--since` | — | Only show repos updated after this date (`YYYY-MM-DD`) |
-| `-h`, `--help` | — | Show help message |
+| `--since` | — | Only repos updated after date (`YYYY-MM-DD`) |
+| `--verbose`, `-v` | `false` | Print API details to stderr |
+| `--quiet`, `-q` | `false` | Suppress stderr warnings |
+| `--help`, `-h` | — | Show help |
 
-### Configuration
+## Configuration
 
-Token resolution priority:
+Token resolution order:
 1. `--token` flag
 2. `GITHUB_TOKEN` environment variable
-3. Config file (`~/.config/ghprofile/config.json` or `$XDG_CONFIG_HOME/ghprofile/config.json`)
+3. Config file: `~/.config/ghprofile/config.json`
 
+Save your token:
 ```sh
 mkdir -p ~/.config/ghprofile
 echo '{"token": "ghp_xxxxxxxxxxxx"}' > ~/.config/ghprofile/config.json
 ```
-
-### Examples
-
-```sh
-# Contribution graph (requires token)
-GITHUB_TOKEN=ghp_xxxxxxxxxxxx ./ghprofile --user dayvster
-
-# JSON output piped to jq
-./ghprofile --user dayvster --json | jq '.profile.followers_amount'
-
-# Custom config file
-./ghprofile --user dayvster --config /path/to/config.json
-
-# Sort by most forked repos
-./ghprofile --user dayvster --sort forks
-
-# Only show repos updated since 2024
-./ghprofile --user dayvster --since 2024-01-01
-
-# Verbose mode (see API calls, timing, cache status)
-./ghprofile --user dayvster --verbose
-
-# Quiet mode (suppress all stderr warnings)
-./ghprofile --user dayvster --quiet
-```
-
----
-
-## Screenshots
-
-| Default | No Border | No Icons |
-|---------|-----------|----------|
-| ![ghprofile demo](screenshots/basic.png) | ![No border](screenshots/no-border.png) | ![No icons](screenshots/no-icons.png) |
-
----
 
 ## License
 
