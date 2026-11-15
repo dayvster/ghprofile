@@ -35,9 +35,9 @@ func FormatProfile(p *github.Profile, repos []github.Repo, topN int, showIcons b
 		b.WriteString(title + "  " + url + "\n")
 	}
 	if p.Bio != "" {
-		b.WriteString(Subtle.Render(p.Bio) + "\n")
+		bio := strings.ReplaceAll(p.Bio, "\\n", "\n")
+		b.WriteString(Subtle.Render(bio) + "\n\n")
 	}
-	b.WriteString("\n")
 	type statEntry struct{ icon, label, value string }
 	totalStars := p.TotalStars
 	totalForks := p.TotalForks
@@ -158,12 +158,22 @@ func FormatProfile(p *github.Profile, repos []github.Repo, topN int, showIcons b
 		for i := 0; i < topN; i++ {
 			r := repos[i]
 			langIcon := GetLangIcon(r.Language)
+			langDisplay := r.Language
+			if langDisplay == "" {
+				langDisplay = "—"
+			}
 			if noStyle {
-				b.WriteString(fmt.Sprintf("%d. %s %s ★ %d  %s %d\n", i+1, r.FullName, r.Language, r.StargazersCount, IconFork, r.ForksCount))
-				b.WriteString("  " + r.HTMLURL + "\n")
+				b.WriteString(fmt.Sprintf("%d. %s | %s | ★ %d  fork %d\n", i+1, r.FullName, langDisplay, r.StargazersCount, r.ForksCount))
+				b.WriteString("  " + r.HTMLURL + "\n\n")
 			} else {
-				b.WriteString(fmt.Sprintf("%d. %s %s %s %d  %s %d\n", i+1, RepoTitle.Render(r.FullName), iconRender(langIcon), iconRender("★"), r.StargazersCount, iconRender(IconFork), r.ForksCount))
-				b.WriteString("  " + URLStyle.Render(r.HTMLURL) + "\n")
+				b.WriteString(fmt.Sprintf("%d. %s", i+1, RepoTitle.Render(r.FullName)))
+				if langIcon != "" {
+					b.WriteString(fmt.Sprintf(" %s %s", iconRender(langIcon), Subtle.Render(langDisplay)))
+				} else if langDisplay != "—" {
+					b.WriteString(fmt.Sprintf(" %s", Subtle.Render(langDisplay)))
+				}
+				b.WriteString(fmt.Sprintf(" | %s %d  %s %d\n", iconRender("★"), r.StargazersCount, iconRender(IconFork), r.ForksCount))
+				b.WriteString("  " + URLStyle.Render(r.HTMLURL) + "\n\n")
 			}
 		}
 	}
