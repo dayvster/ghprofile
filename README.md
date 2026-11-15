@@ -20,12 +20,20 @@ A beautiful, customizable GitHub profile viewer for your terminal.
 
 ## Quick Start
 
+**Build:**
 ```sh
-go build -o ghprofile ./cmd/main.go
-./ghprofile --user dayvster
+make build                    # or: go build -o ghprofile ./cmd/main.go
+make install                  # Build and install to $GOPATH/bin
 ```
 
-With token (higher rate limit + contribution graph):
+**Run:**
+```sh
+./ghprofile --user dayvster
+./ghprofile --demo --theme dracula    # Preview with theme
+./ghprofile --list-themes            # See all available themes
+```
+
+**With token** (higher rate limit + contribution graph):
 ```sh
 ./ghprofile --user dayvster --token ghp_xxxxxxxxxxxx
 ```
@@ -55,6 +63,8 @@ Examples:
 | `-u`, `--user` | — | GitHub username(s) (comma-separated for multiple) |
 | `-n` | `5` | Top repos to show |
 | `--token` | — | GitHub personal access token (or `GITHUB_TOKEN` env) |
+| `--theme` | `tokyonight` | Color theme |
+| `--list-themes` | — | Show all available themes |
 | `--sort` | `stars` | Sort by: `stars`, `forks`, `name`, `updated` |
 | `--json` | `false` | Output as JSON |
 | `--tui` | `true` | Interactive TUI mode |
@@ -68,17 +78,31 @@ Examples:
 | `--quiet`, `-q` | `false` | Suppress stderr warnings |
 | `--help`, `-h` | — | Show help |
 
+## Themes
+
+Available themes: `nord`, `dracula`, `tokyonight` (default), `monokai`, `gruvbox`, `solarized`, `catppuccin`, `onelight`
+
+```sh
+./ghprofile --user dayvster --theme dracula
+./ghprofile --list-themes
+```
+
 ## Configuration
 
-Token resolution order:
-1. `--token` flag
-2. `GITHUB_TOKEN` environment variable
+Token and theme resolution order:
+1. CLI flags (`--token`, `--theme`)
+2. Environment variables (`GITHUB_TOKEN`)
 3. Config file: `~/.config/ghprofile/config.json`
 
-Save your token:
+Save defaults:
 ```sh
 mkdir -p ~/.config/ghprofile
-echo '{"token": "ghp_xxxxxxxxxxxx"}' > ~/.config/ghprofile/config.json
+cat > ~/.config/ghprofile/config.json << EOF
+{
+  "token": "ghp_xxxxxxxxxxxx",
+  "theme": "dracula"
+}
+EOF
 ```
 
 ## License
