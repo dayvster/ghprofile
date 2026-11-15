@@ -9,7 +9,8 @@ func Panel(width int) lipgloss.Style {
 		Padding(1, 2).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(CurrentTheme.BorderFg).
-		Foreground(CurrentTheme.BrightFg)
+		Foreground(CurrentTheme.BrightFg).
+		Background(CurrentTheme.BgColor)
 	if width > 0 {
 		s = s.Width(width)
 	}

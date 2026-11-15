@@ -5,6 +5,7 @@ import "github.com/charmbracelet/lipgloss"
 type Theme struct {
 	Name         string
 	BrightFg     lipgloss.Color
+	BgColor      lipgloss.Color
 	AccentCyan   lipgloss.Color
 	AccentBlue   lipgloss.Color
 	AccentGreen  lipgloss.Color
@@ -18,6 +19,7 @@ var Themes = map[string]Theme{
 	"nord": {
 		Name:         "nord",
 		BrightFg:     lipgloss.Color("#eceff4"),
+		BgColor:      lipgloss.Color("#2e3440"),
 		AccentCyan:   lipgloss.Color("#88c0d0"),
 		AccentBlue:   lipgloss.Color("#81a1c1"),
 		AccentGreen:  lipgloss.Color("#a3be8c"),
@@ -29,6 +31,7 @@ var Themes = map[string]Theme{
 	"dracula": {
 		Name:         "dracula",
 		BrightFg:     lipgloss.Color("#f8f8f2"),
+		BgColor:      lipgloss.Color("#282a36"),
 		AccentCyan:   lipgloss.Color("#8be9fd"),
 		AccentBlue:   lipgloss.Color("#6272a4"),
 		AccentGreen:  lipgloss.Color("#50fa7b"),
@@ -40,6 +43,7 @@ var Themes = map[string]Theme{
 	"tokyonight": {
 		Name:         "tokyonight",
 		BrightFg:     lipgloss.Color("#c0caf5"),
+		BgColor:      lipgloss.Color("#1a1b26"),
 		AccentCyan:   lipgloss.Color("#7dcfff"),
 		AccentBlue:   lipgloss.Color("#7aa2f7"),
 		AccentGreen:  lipgloss.Color("#9ece6a"),
@@ -51,6 +55,7 @@ var Themes = map[string]Theme{
 	"monokai": {
 		Name:         "monokai",
 		BrightFg:     lipgloss.Color("#f8f8f2"),
+		BgColor:      lipgloss.Color("#272822"),
 		AccentCyan:   lipgloss.Color("#66d9ef"),
 		AccentBlue:   lipgloss.Color("#66d9ef"),
 		AccentGreen:  lipgloss.Color("#a1efe4"),
@@ -62,6 +67,7 @@ var Themes = map[string]Theme{
 	"gruvbox": {
 		Name:         "gruvbox",
 		BrightFg:     lipgloss.Color("#ebdbb2"),
+		BgColor:      lipgloss.Color("#282828"),
 		AccentCyan:   lipgloss.Color("#8ec07c"),
 		AccentBlue:   lipgloss.Color("#83a598"),
 		AccentGreen:  lipgloss.Color("#b8bb26"),
@@ -73,6 +79,7 @@ var Themes = map[string]Theme{
 	"solarized": {
 		Name:         "solarized",
 		BrightFg:     lipgloss.Color("#fdf6e3"),
+		BgColor:      lipgloss.Color("#002b36"),
 		AccentCyan:   lipgloss.Color("#2aa198"),
 		AccentBlue:   lipgloss.Color("#268bd2"),
 		AccentGreen:  lipgloss.Color("#859900"),
@@ -84,6 +91,7 @@ var Themes = map[string]Theme{
 	"catppuccin": {
 		Name:         "catppuccin",
 		BrightFg:     lipgloss.Color("#cdd6f4"),
+		BgColor:      lipgloss.Color("#1e1e2e"),
 		AccentCyan:   lipgloss.Color("#74c7ec"),
 		AccentBlue:   lipgloss.Color("#89b4fa"),
 		AccentGreen:  lipgloss.Color("#a6e3a1"),
@@ -95,6 +103,7 @@ var Themes = map[string]Theme{
 	"onelight": {
 		Name:         "onelight",
 		BrightFg:     lipgloss.Color("#383a42"),
+		BgColor:      lipgloss.Color("#fafafa"),
 		AccentCyan:   lipgloss.Color("#0184bc"),
 		AccentBlue:   lipgloss.Color("#4078f2"),
 		AccentGreen:  lipgloss.Color("#50a14f"),
@@ -106,6 +115,7 @@ var Themes = map[string]Theme{
 	"ember": {
 		Name:         "ember",
 		BrightFg:     lipgloss.Color("#e0e0e0"),
+		BgColor:      lipgloss.Color("#1a1a1a"),
 		AccentCyan:   lipgloss.Color("#71c7d4"),
 		AccentBlue:   lipgloss.Color("#5fafef"),
 		AccentGreen:  lipgloss.Color("#8fb573"),
@@ -117,6 +127,7 @@ var Themes = map[string]Theme{
 	"ayu-dark": {
 		Name:         "ayu-dark",
 		BrightFg:     lipgloss.Color("#e6e1cf"),
+		BgColor:      lipgloss.Color("#0f1419"),
 		AccentCyan:   lipgloss.Color("#95e6cb"),
 		AccentBlue:   lipgloss.Color("#6dcbfa"),
 		AccentGreen:  lipgloss.Color("#a6e22e"),
@@ -128,6 +139,7 @@ var Themes = map[string]Theme{
 	"ayu-light": {
 		Name:         "ayu-light",
 		BrightFg:     lipgloss.Color("#3d3d3d"),
+		BgColor:      lipgloss.Color("#fafafa"),
 		AccentCyan:   lipgloss.Color("#0d9c9c"),
 		AccentBlue:   lipgloss.Color("#2196f3"),
 		AccentGreen:  lipgloss.Color("#86a02a"),
@@ -139,6 +151,7 @@ var Themes = map[string]Theme{
 	"one-dark": {
 		Name:         "one-dark",
 		BrightFg:     lipgloss.Color("#abb2bf"),
+		BgColor:      lipgloss.Color("#282c34"),
 		AccentCyan:   lipgloss.Color("#56b6c2"),
 		AccentBlue:   lipgloss.Color("#61afef"),
 		AccentGreen:  lipgloss.Color("#98c379"),
@@ -150,6 +163,7 @@ var Themes = map[string]Theme{
 	"material": {
 		Name:         "material",
 		BrightFg:     lipgloss.Color("#eeffff"),
+		BgColor:      lipgloss.Color("#263238"),
 		AccentCyan:   lipgloss.Color("#80cbc4"),
 		AccentBlue:   lipgloss.Color("#82b1ff"),
 		AccentGreen:  lipgloss.Color("#c3e88d"),
@@ -161,6 +175,7 @@ var Themes = map[string]Theme{
 	"synthwave": {
 		Name:         "synthwave",
 		BrightFg:     lipgloss.Color("#f2f4f6"),
+		BgColor:      lipgloss.Color("#000000"),
 		AccentCyan:   lipgloss.Color("#00ff88"),
 		AccentBlue:   lipgloss.Color("#00d9ff"),
 		AccentGreen:  lipgloss.Color("#39ff14"),
@@ -172,6 +187,7 @@ var Themes = map[string]Theme{
 	"palenight": {
 		Name:         "palenight",
 		BrightFg:     lipgloss.Color("#a6acb5"),
+		BgColor:      lipgloss.Color("#292d3e"),
 		AccentCyan:   lipgloss.Color("#89ddff"),
 		AccentBlue:   lipgloss.Color("#82aaff"),
 		AccentGreen:  lipgloss.Color("#c3e88d"),
@@ -183,6 +199,7 @@ var Themes = map[string]Theme{
 	"github-light": {
 		Name:         "github-light",
 		BrightFg:     lipgloss.Color("#24292f"),
+		BgColor:      lipgloss.Color("#ffffff"),
 		AccentCyan:   lipgloss.Color("#0969da"),
 		AccentBlue:   lipgloss.Color("#0969da"),
 		AccentGreen:  lipgloss.Color("#2da44e"),
@@ -194,6 +211,7 @@ var Themes = map[string]Theme{
 	"github-dark": {
 		Name:         "github-dark",
 		BrightFg:     lipgloss.Color("#c9d1d9"),
+		BgColor:      lipgloss.Color("#0d1117"),
 		AccentCyan:   lipgloss.Color("#58a6ff"),
 		AccentBlue:   lipgloss.Color("#58a6ff"),
 		AccentGreen:  lipgloss.Color("#3fb950"),
@@ -205,6 +223,7 @@ var Themes = map[string]Theme{
 	"nord-light": {
 		Name:         "nord-light",
 		BrightFg:     lipgloss.Color("#2e3440"),
+		BgColor:      lipgloss.Color("#eceff4"),
 		AccentCyan:   lipgloss.Color("#88c0d0"),
 		AccentBlue:   lipgloss.Color("#81a1c1"),
 		AccentGreen:  lipgloss.Color("#a3be8c"),
@@ -216,6 +235,7 @@ var Themes = map[string]Theme{
 	"everforest": {
 		Name:         "everforest",
 		BrightFg:     lipgloss.Color("#d4be98"),
+		BgColor:      lipgloss.Color("#2d2a2e"),
 		AccentCyan:   lipgloss.Color("#7fbbb3"),
 		AccentBlue:   lipgloss.Color("#7daea3"),
 		AccentGreen:  lipgloss.Color("#a7c957"),
